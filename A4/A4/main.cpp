@@ -28,7 +28,7 @@ using namespace std;
 */
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))  // Macro for indexing vertex buffer
 
-#define NUM_MESHES   6
+#define NUM_MESHES   9
 #define NUM_SHADERS	 5
 #define NUM_TEXTURES 1
 
@@ -36,7 +36,7 @@ bool firstMouse = true;
 bool keys[1024];
 Camera camera(vec3(-1.5f, 2.0f, 10.0f));
 //enum Meshes { BASE_MESH, THUMB0_MESH, THUMB1_MESH, THUMB2_MESH };
-enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH };
+enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH, LOWER_ARM_SHELL_MESH, UPPER_ARM_SHELL_MESH, TORSO_MESH };
 enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST};
 enum Shaders { SKYBOX, BASIC_COLOUR_SHADER, BASIC_TEXTURE_SHADER, LIGHT_SHADER, LIGHT_TEXTURE_SHADER };
 enum Textures { METAL_TEXTURE };
@@ -50,8 +50,8 @@ int screenWidth = 1000;
 int screenHeight = 800;
 Mesh skyboxMesh;// , planeMesh;
 //Mesh baseMesh, thumbMesh0, thumbMesh1, thumbMesh2;
-Mesh handMesh, handShellMesh, fingerJointMesh, fingerTipMesh, jointShellMesh, tipShellMesh;
-Skeleton handSkeleton;
+Mesh handMesh, handShellMesh, fingerJointMesh, fingerTipMesh, jointShellMesh, tipShellMesh, lowerArmShellMesh, upperArmShellMesh, torsoMesh;
+Skeleton handSkeleton, torsoSkeleton;
 vec4 upV = vec4(0.0f, 0.0f, 1.0f, 0.0f); //Up and Forward are flipped because of the initial rotation of the model
 vec4 fV = vec4(0.0f, 1.0f, 0.0f, 0.0f);
 vec4 rightV = vec4(1.0f, 0.0f, 0.0f, 0.0f);
@@ -61,7 +61,7 @@ mat4 rotationMat;
 //mat4 eulerRotationMat;
 
 // | Resource Locations
-const char * meshFiles[NUM_MESHES] = { "../Meshes/hand.obj", "../Meshes/hand_shell.obj", "../Meshes/finger_joint.dae", "../Meshes/finger_tip.dae", "../Meshes/finger_joint_shell.obj", "../Meshes/finger_tip_shell.dae" };
+const char * meshFiles[NUM_MESHES] = { "../Meshes/hand.obj", "../Meshes/hand_shell.obj", "../Meshes/finger_joint.dae", "../Meshes/finger_tip.dae", "../Meshes/finger_joint_shell.obj", "../Meshes/finger_tip_shell.dae", "../Meshes/lower_arm_shell.dae", "../Meshes/upper_arm_shell.dae", "../Meshes/torso_disk3.dae" };
 const char * skyboxTextureFiles[6] = { "../Textures/TCWposx.png", "../Textures/TCWnegx.png", "../Textures/TCWposy.png", "../Textures/TCWnegy.png", "../Textures/TCWposz.png", "../Textures/TCWnegz.png" };
 const char * textureFiles[NUM_TEXTURES] = { "../Textures/metal.jpg" };
 
@@ -90,7 +90,7 @@ void display()
 
 	vec4 view_position = vec4(camera.Position.v[0], camera.Position.v[1], camera.Position.v[2], 0.0f);
 
-	handSkeleton.drawSkeleton(view, projection, view_position);
+	torsoSkeleton.drawSkeleton(view, projection, view_position);
 
 	glutSwapBuffers();
 }
@@ -144,16 +144,16 @@ void updateScene()
 	switch (animationMode)
 	{
 	case ROTATE_HAND:
-		handSkeleton.rotateWrist360();
+		torsoSkeleton.rotateWrist360();
 		break;
 	case CLOSE_FIST:
-		handSkeleton.closeFist();
+		torsoSkeleton.closeFist();
 		break;
 	case OPEN_FIST:
-		handSkeleton.openFist();
+		torsoSkeleton.openFist();
 		break;
 	case CLOSE_AND_OPEN_FIST:
-		handSkeleton.closeAndOpenFist();
+		torsoSkeleton.closeAndOpenFist();
 		break;
 	}
 	processInput();
@@ -191,6 +191,10 @@ void init()
 	fingerTipMesh.generateObjectBufferMesh(meshFiles[TIP_MESH]);
 	fingerTipMesh.loadTexture(textureFiles[METAL_TEXTURE]);
 
+	torsoMesh = Mesh(&shaderProgramID[LIGHT_TEXTURE_SHADER]);
+	torsoMesh.generateObjectBufferMesh(meshFiles[TORSO_MESH]);
+	torsoMesh.loadTexture(textureFiles[METAL_TEXTURE]);
+
 	handShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
 	handShellMesh.generateObjectBufferMesh(meshFiles[HAND_SHELL_MESH]);
 
@@ -200,7 +204,16 @@ void init()
 	tipShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
 	tipShellMesh.generateObjectBufferMesh(meshFiles[TIP_SHELL_MESH]);
 
-	handSkeleton.createHand(handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
+	lowerArmShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
+	lowerArmShellMesh.generateObjectBufferMesh(meshFiles[LOWER_ARM_SHELL_MESH]);
+
+	upperArmShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
+	upperArmShellMesh.generateObjectBufferMesh(meshFiles[UPPER_ARM_SHELL_MESH]);
+
+
+	//handSkeleton.createHand(handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
+
+	torsoSkeleton.createTorso(torsoMesh, upperArmShellMesh, lowerArmShellMesh, handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
 
 	//thumbMesh0 = Mesh(&shaderProgramID[BASIC_COLOUR_SHADER]);
 	//thumbMesh0.generateObjectBufferMesh(meshFiles[THUMB0_MESH]);

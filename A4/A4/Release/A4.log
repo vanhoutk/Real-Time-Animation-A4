@@ -1,7 +1,7 @@
 ﻿  main.cpp
   Generating code
-  7 of 688 functions ( 1.0%) were compiled, the rest were copied from previous compilation.
+  2 of 695 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    2 functions had inline decision re-evaluated but remain unchanged
+    4 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   A4.vcxproj -> E:\Users\Kris\Documents\College\Fifth Year OneDrive\OneDrive\Fifth Year - Computers\CS7033 - Real-time Animation\Assignments\Code\Real-Time-Animation-A4\A4\Release\A4.exe
