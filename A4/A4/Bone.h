@@ -26,6 +26,8 @@ public:
 	void bendJoint(GLfloat rotation);
 	void rollJoint(GLfloat rotation);
 	void pivotJoint(GLfloat rotation);
+
+	mat4 getGlobalTransformation();
 private:
 	bool hasShell;
 	bool isRoot;
@@ -45,7 +47,6 @@ private:
 	mat4 local_transformation;
 
 
-	mat4 getGlobalTransformation();
 };
 
 Bone::Bone()

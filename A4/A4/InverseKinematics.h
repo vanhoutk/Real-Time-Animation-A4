@@ -26,13 +26,17 @@ void analyticalIK(vec3 endPosition, float L1, float L2, float& theta1, float& th
 
 	// d
 	float distance = sqrt(x2 + y2 + z2);
+	float distance2 = x2 + y2 + z2;
 
 	float distanceXZ = sqrt(x2 + z2);
 	float distanceXY = sqrt(x2 + y2);
 	float distanceYZ = sqrt(y2 + z2);
 
-	float thetaT = acosf(distanceXZ / distance);
+	float thetaT = degrees(acos(distanceXZ / distance));
+	float thetaT_deg = degrees(thetaT);
 
-	theta1 = acosf((L12 + x2 + y2 + x2 - L22) / (2 * L1 * distance)) + thetaT;
-	theta2 = acosf((L12 + L22 - (x2 + y2 + z2)) / (2 * L1 * L2));
+	float fraction1 = (L12 + distance2 - L22) / (2 * L1 * distance);
+	float fraction2 = (L12 + L22 - distance2) / (2 * L1 * L2);
+	theta1 = degrees(acosf(fraction1)) - thetaT;
+	theta2 = degrees(acosf(fraction2));
 }

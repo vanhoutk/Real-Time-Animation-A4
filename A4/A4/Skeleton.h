@@ -10,6 +10,7 @@
 
 #include "Antons_maths_funcs.h" // Anton's maths functions
 #include "Bone.h"
+#include "InverseKinematics.h"
 #include "Mesh.h"
 
 class Skeleton {
@@ -27,10 +28,14 @@ public:
 	void closeFist();
 	void openFist();
 	void closeAndOpenFist();
+	void moveTo(vec3 position);
 private:
 	GLfloat count = 0.0f;
 	GLfloat speed = 0.15f;
 	bool close = true;
+	bool once = false;
+	GLfloat theta1 = 0.0f;
+	GLfloat theta2 = 0.0f;
 };
 
 Skeleton::Skeleton()
@@ -139,14 +144,14 @@ void Skeleton::createTorso(Mesh torsoMesh, Mesh upperArmShell, Mesh lowerArmShel
 	bones[2] = new Bone("upper_arm", bones[1], upper_arm_local, jointMesh, upperArmShell, true, joint_colour, shell_colour);
 	bones[1]->addChild(bones[2]);
 	bones[2]->rollJoint(radians(-90.0f));
-	bones[2]->pivotJoint(radians(-70.0f));
+	//bones[2]->pivotJoint(radians(-70.0f));
 
 	// Lower Arm
 	mat4 lower_arm_local = scale(identity_mat4(), vec3(0.9f, 0.9f, 0.9f));
 	lower_arm_local = translate(lower_arm_local, vec3(-5.0f, 0.0f, 0.0f));
 	bones[3] = new Bone("lower_arm", bones[2], lower_arm_local, jointMesh, lowerArmShell, true, joint_colour, shell_colour);
 	bones[2]->addChild(bones[3]);
-	bones[3]->pivotJoint(radians(-20.0f));
+	//bones[3]->pivotJoint(radians(-20.0f));
 
 	// Hand
 	mat4 hand_local = scale(identity_mat4(), vec3(0.3f, 0.3f, 0.3f));
@@ -268,4 +273,25 @@ void Skeleton::closeAndOpenFist()
 {
 	closeFist();
 	openFist();
+}
+
+void Skeleton::moveTo(vec3 position)
+{
+	//float theta1;
+	//float theta2;
+	//vec4 start_position = bones[2]->getGlobalTransformation() * vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	//vec3 start_position_vec3 = vec3(start_position.v[0], start_position.v[1], start_position.v[2]);
+
+	bones[3]->bendJoint(-1.0f * radians(theta2));
+	bones[2]->pivotJoint(-1.0f * radians(theta1));
+
+	vec3 start_position = vec3(-2.5f, 7.5f, 0.0f);
+	analyticalIK(position - start_position, 4.8f, 4.32f, theta1, theta2);
+
+	if (true)
+	{
+		once = !once;
+		bones[2]->pivotJoint(1.0f * radians(theta1));
+		bones[3]->bendJoint(1.0f * radians(theta2));
+	}
 }

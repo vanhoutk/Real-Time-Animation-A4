@@ -9,12 +9,6 @@
 #include <windows.h>
 
 #include "Antons_maths_funcs.h" // Anton's maths functions
-#include "PlaneRotation.h"
-
-GLfloat radians(GLfloat degrees)
-{
-	return (degrees * ((2.0f * (float)PI) / 360.0f));
-}
 
 mat4 getRotationMatrix(GLfloat yawR, GLfloat pitchR, GLfloat rollR, vec4 &fV, vec4 &rightV, vec4 &upV)
 {

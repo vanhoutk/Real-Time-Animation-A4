@@ -936,4 +936,13 @@ float quatMagnitude(versor v)
 	return result;
 }
 
+GLfloat radians(GLfloat degrees)
+{
+	return (degrees * ((2.0f * (float)M_PI) / 360.0f));
+}
+
+GLfloat degrees(GLfloat radians)
+{
+	return (radians * (360.0f / (2.0f * (float)M_PI)));
+}
 #endif
