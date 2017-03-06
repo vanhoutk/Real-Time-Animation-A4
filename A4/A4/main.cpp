@@ -56,7 +56,7 @@ vec4 upV = vec4(0.0f, 0.0f, 1.0f, 0.0f); //Up and Forward are flipped because of
 vec4 fV = vec4(0.0f, 1.0f, 0.0f, 0.0f);
 vec4 rightV = vec4(1.0f, 0.0f, 0.0f, 0.0f);
 vec3 origin = vec3(0.0f, 0.0f, 0.0f);
-vec3 spherePosition = vec3(-7.0f, 3.0f, 0.0f);
+vec3 spherePosition = vec3(-9.0f, 10.0f, 0.0f);
 versor orientation;
 mat4 rotationMat;
 //mat4 eulerRotationMat;
@@ -112,13 +112,13 @@ void processInput()
 		camera.ProcessKeyboard(RIGHT, cameraSpeed);
 
 	if (keys['p'])
-		spherePosition += vec3(-0.1f, 0.0f, 0.0f);
+		spherePosition += vec3(-0.01f, 0.0f, 0.0f);
 	if (keys['o'])
-		spherePosition += vec3(0.0f, 0.1f, 0.0f);
+		spherePosition += vec3(0.0f, 0.01f, 0.0f);
 	if (keys['l'])
-		spherePosition += vec3(0.0f, -0.1f, 0.0f);
+		spherePosition += vec3(0.0f, -0.01f, 0.0f);
 	if (keys['i'])
-		spherePosition += vec3(0.1f, 0.0f, 0.0f);
+		spherePosition += vec3(0.01f, 0.0f, 0.0f);
 
 	if (keys['1'])
 		animationMode = ROTATE_HAND;

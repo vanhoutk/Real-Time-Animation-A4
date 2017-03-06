@@ -158,7 +158,7 @@ void Skeleton::createTorso(Mesh torsoMesh, Mesh upperArmShell, Mesh lowerArmShel
 	hand_local = translate(hand_local, vec3(-7.0f, 0.0f, 0.0f));
 	bones[handIndex+0] = new Bone("hand", bones[3], hand_local, handMesh, handShell, true, joint_colour, shell_colour);
 	bones[3]->addChild(bones[handIndex+0]);
-	bones[3]->rollJoint(radians(90.0f));
+	bones[handIndex+0]->rollJoint(radians(90.0f));
 
 	// Thumb
 	mat4 thumb1_local = scale(identity_mat4(), vec3(0.75f, 1.0f, 1.0f) * 0.8f);
@@ -282,16 +282,16 @@ void Skeleton::moveTo(vec3 position)
 	//vec4 start_position = bones[2]->getGlobalTransformation() * vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	//vec3 start_position_vec3 = vec3(start_position.v[0], start_position.v[1], start_position.v[2]);
 
-	bones[3]->bendJoint(-1.0f * radians(theta2));
-	bones[2]->pivotJoint(-1.0f * radians(theta1));
+	bones[3]->pivotJoint(1.0f * radians(theta2));
+	bones[2]->pivotJoint(1.0f * radians(theta1));
 
 	vec3 start_position = vec3(-2.5f, 7.5f, 0.0f);
-	analyticalIK(position - start_position, 4.8f, 4.32f, theta1, theta2);
+	analyticalIK(position - start_position, 5.0f, 5.0f, theta1, theta2);
 
-	if (true)
-	{
-		once = !once;
-		bones[2]->pivotJoint(1.0f * radians(theta1));
-		bones[3]->bendJoint(1.0f * radians(theta2));
-	}
+	//if (true)
+	//{
+	//	once = !once;
+		bones[2]->pivotJoint(-1.0f * radians(theta1));
+		bones[3]->pivotJoint(-1.0f * radians(theta2));
+	//}
 }
