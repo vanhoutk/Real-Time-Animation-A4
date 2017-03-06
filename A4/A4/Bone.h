@@ -20,14 +20,16 @@ public:
 	Bone(string name, Bone* parent, mat4 initial_offset, Mesh joint, Mesh shell, bool hasShell, vec4 jointColour, vec4 shellColour);
 	Bone(string name, bool isRoot, mat4 initial_offset, Mesh joint, Mesh shell, bool hasShell, vec4 jointColour, vec4 shellColour);
 
+	mat4 getGlobalTransformation();
+
 	void addChild(Bone* child);
 	void addChild(string name, mat4 initial_offset, Mesh joint, Mesh shell, bool hasShell);
 	void drawBone(mat4 view, mat4 projection, vec4 viewPosition);
 	void bendJoint(GLfloat rotation);
 	void rollJoint(GLfloat rotation);
+	void rotateJoint(GLfloat rotation, vec3 axis);
 	void pivotJoint(GLfloat rotation);
 
-	mat4 getGlobalTransformation();
 private:
 	bool hasShell;
 	bool isRoot;
@@ -152,4 +154,14 @@ void Bone::pivotJoint(GLfloat rotation)
 	this->forwardVector = this->rotationMatrix * vec4(1.0f, 0.0f, 0.0f, 0.0f);
 	this->rightVector = this->rotationMatrix * vec4(0.0f, 0.0f, 1.0f, 0.0f);
 	//this->upVector = this->rotationMatrix * vec4(0.0f, 1.0f, 0.0f, 0.0f);
+}
+
+void Bone::rotateJoint(GLfloat rotation, vec3 axis)
+{
+	versor quat = quat_from_axis_rad(rotation, axis.v[0], axis.v[1], axis.v[2]);
+	multiplyQuat(this->orientation, quat, this->orientation);
+	this->rotationMatrix = quat_to_mat4(this->orientation);
+	this->forwardVector = this->rotationMatrix * vec4(1.0f, 0.0f, 0.0f, 0.0f);
+	this->rightVector = this->rotationMatrix * vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	this->upVector = this->rotationMatrix * vec4(0.0f, 1.0f, 0.0f, 0.0f);
 }

@@ -29,6 +29,8 @@ public:
 	void openFist();
 	void closeAndOpenFist();
 	void moveTo(vec3 position);
+	void moveToCCD(vec3 position);
+	bool CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex);
 private:
 	GLfloat count = 0.0f;
 	GLfloat speed = 0.15f;
@@ -294,4 +296,102 @@ void Skeleton::moveTo(vec3 position)
 		bones[2]->pivotJoint(-1.0f * radians(theta1));
 		bones[3]->pivotJoint(-1.0f * radians(theta2));
 	//}
+}
+
+void Skeleton::moveToCCD(vec3 position)
+{
+	CCDIK(position, handIndex, handIndex - 2);
+}
+
+#define MAX_IK_TRIES 100 // TIMES THROUGH THE CCD LOOP
+#define IK_POS_THRESH 0.1f // THRESHOLD FOR SUCCESS
+
+///////////////////////////////////////////////////////////////////////////////
+// Procedure:	ComputeCCDLink
+// Purpose:		Compute an IK Solution to an end effector position in 3D
+// Arguments:	End Target (x,y,z)
+// Returns:		TRUE if a solution exists, FALSE if the position isn't in reach
+///////////////////////////////////////////////////////////////////////////////	
+bool Skeleton::CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex)
+{
+	/// Local Variables ///////////////////////////////////////////////////////////
+	vec3		rootPos, curEnd, desiredEnd, targetVector, curVector, crossResult;
+	GLfloat		cosAngle, turnAngle;
+	int			bone_index, tries;
+	versor		aquat;
+	///////////////////////////////////////////////////////////////////////////////
+	// START AT THE LAST bone_index IN THE CHAIN
+	bone_index = endEffectorIndex - 1;
+	tries = 0;						// LOOP COUNTER SO I KNOW WHEN TO QUIT
+	do
+	{
+		// THE COORDS OF THE X,Y,Z POSITION OF THE ROOT OF THIS BONE IS IN THE MATRIX
+		// TRANSLATION PART WHICH IS IN THE 12,13,14 POSITION OF THE MATRIX
+		rootPos.v[0] = bones[bone_index]->getGlobalTransformation().m[12];
+		rootPos.v[1] = bones[bone_index]->getGlobalTransformation().m[13];
+		rootPos.v[2] = bones[bone_index]->getGlobalTransformation().m[14];
+
+		// POSITION OF THE END EFFECTOR
+		curEnd.v[0] = bones[endEffectorIndex]->getGlobalTransformation().m[12];
+		curEnd.v[1] = bones[endEffectorIndex]->getGlobalTransformation().m[13];
+		curEnd.v[2] = bones[endEffectorIndex]->getGlobalTransformation().m[14];
+
+		// DESIRED END EFFECTOR POSITION
+		desiredEnd.v[0] = position.v[0];
+		desiredEnd.v[1] = position.v[1];
+		desiredEnd.v[2] = position.v[2];
+
+		// SEE IF I AM ALREADY CLOSE ENOUGH
+		if (get_squared_dist(curEnd, desiredEnd) > IK_POS_THRESH)
+		{
+			// CREATE THE VECTOR TO THE CURRENT EFFECTOR POS
+			curVector.v[0] = curEnd.v[0] - rootPos.v[0];
+			curVector.v[1] = curEnd.v[1] - rootPos.v[1];
+			curVector.v[2] = curEnd.v[2] - rootPos.v[2];
+
+			// CREATE THE DESIRED EFFECTOR POSITION VECTOR
+			targetVector.v[0] = position.v[0] - rootPos.v[0];
+			targetVector.v[1] = position.v[1] - rootPos.v[1];
+			targetVector.v[2] = position.v[2] - rootPos.v[2];
+
+			// NORMALIZE THE VECTORS (EXPENSIVE, REQUIRES A SQRT)
+			curVector = normalise(curVector);
+			targetVector = normalise(targetVector);
+
+			// THE DOT PRODUCT GIVES ME THE COSINE OF THE DESIRED ANGLE
+			cosAngle = dot(targetVector, curVector);
+
+			// IF THE DOT PRODUCT RETURNS 1.0, I DON'T NEED TO ROTATE AS IT IS 0 DEGREES
+			if (cosAngle < 0.99999)
+			{
+				// USE THE CROSS PRODUCT TO CHECK WHICH WAY TO ROTATE
+				crossResult = cross(curVector, targetVector);
+				crossResult = normalise(crossResult);
+				turnAngle = acos((float)cosAngle);	// GET THE ANGLE
+													//turnDeg = degrees(turnAngle);		// COVERT TO DEGREES
+													// DAMPING
+													//if (m_Damping && turnDeg > bones[bone_index].damp_width)
+													//	turnDeg = bones[bone_index].damp_width;
+
+													//AxisAngleToQuat(&crossResult, turnDeg, &aquat);
+													//MultQuaternions(&bones[bone_index].quat, &aquat, &bones[bone_index].quat);
+
+				bones[bone_index]->rotateJoint(turnAngle, crossResult);
+
+				// HANDLE THE DOF RESTRICTIONS IF I WANT THEM
+				//if (m_DOF_Restrict)
+				//	CheckDOFRestrictions(&bones[bone_index]);
+
+				// RECALC ALL THE MATRICES WITHOUT DRAWING ANYTHING
+				//drawScene(FALSE);		// CHANGE THIS TO TRUE IF YOU WANT TO SEE THE ITERATION
+			}
+			if (--bone_index < chainRootIndex) bone_index = endEffectorIndex - 1;	// START OF THE CHAIN, RESTART
+		}
+		// QUIT IF I AM CLOSE ENOUGH OR BEEN RUNNING LONG ENOUGH
+	} while (tries++ < MAX_IK_TRIES &&
+		get_squared_dist(curEnd, desiredEnd) > IK_POS_THRESH);
+	if (tries == MAX_IK_TRIES)
+		return FALSE;
+	else
+		return TRUE;
 }

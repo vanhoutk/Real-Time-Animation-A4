@@ -37,7 +37,7 @@ bool keys[1024];
 Camera camera(vec3(-1.5f, 2.0f, 10.0f));
 //enum Meshes { BASE_MESH, THUMB0_MESH, THUMB1_MESH, THUMB2_MESH };
 enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH, LOWER_ARM_SHELL_MESH, UPPER_ARM_SHELL_MESH, TORSO_MESH, SPHERE_MESH };
-enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK};
+enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK, CCD_IK};
 enum Shaders { SKYBOX, BASIC_COLOUR_SHADER, BASIC_TEXTURE_SHADER, LIGHT_SHADER, LIGHT_TEXTURE_SHADER };
 enum Textures { METAL_TEXTURE };
 GLfloat cameraSpeed = 0.005f;
@@ -112,13 +112,17 @@ void processInput()
 		camera.ProcessKeyboard(RIGHT, cameraSpeed);
 
 	if (keys['p'])
-		spherePosition += vec3(-0.01f, 0.0f, 0.0f);
+		spherePosition += vec3(0.01f, 0.0f, 0.0f);
 	if (keys['o'])
 		spherePosition += vec3(0.0f, 0.01f, 0.0f);
 	if (keys['l'])
 		spherePosition += vec3(0.0f, -0.01f, 0.0f);
 	if (keys['i'])
-		spherePosition += vec3(0.01f, 0.0f, 0.0f);
+		spherePosition += vec3(-0.01f, 0.0f, 0.0f);
+	if (keys['j'])
+		spherePosition += vec3(0.0f, 0.0f, 0.01f);
+	if (keys['k'])
+		spherePosition += vec3(0.0f, 0.0f, -0.01f);
 
 	if (keys['1'])
 		animationMode = ROTATE_HAND;
@@ -130,9 +134,9 @@ void processInput()
 		animationMode = CLOSE_AND_OPEN_FIST;
 	if (keys['5'])
 		animationMode = ANALYTICAL_IK;
-	/*if (keys['6'])
-		boneIndex = 6;
-	if (keys['7'])
+	if (keys['6'])
+		animationMode = CCD_IK;
+	/*if (keys['7'])
 		boneIndex = 7;
 	if (keys['8'])
 		boneIndex = 8;
@@ -164,6 +168,9 @@ void updateScene()
 		break;
 	case ANALYTICAL_IK:
 		torsoSkeleton.moveTo(spherePosition);
+		break;
+	case CCD_IK:
+		torsoSkeleton.moveToCCD(spherePosition);
 		break;
 	}
 	processInput();
