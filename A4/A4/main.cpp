@@ -33,6 +33,7 @@ using namespace std;
 #define NUM_TEXTURES 1
 
 bool firstMouse = true;
+bool forwardAnimation = true;
 bool keys[1024];
 Camera camera(vec3(-1.5f, 2.0f, 10.0f));
 //enum Meshes { BASE_MESH, THUMB0_MESH, THUMB1_MESH, THUMB2_MESH };
@@ -41,6 +42,8 @@ enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL
 enum Shaders { SKYBOX, BASIC_COLOUR_SHADER, BASIC_TEXTURE_SHADER, LIGHT_SHADER, LIGHT_TEXTURE_SHADER };
 enum Textures { METAL_TEXTURE };
 GLfloat cameraSpeed = 0.005f;
+GLfloat currentTime = 0.0f;
+GLfloat timeChange = 0.001f;
 GLfloat yaw = 0.0f, pitch = 0.0f, roll = 0.0f;
 GLuint animationMode = -1;
 GLuint boneIndex = 0;
@@ -56,7 +59,11 @@ vec4 upV = vec4(0.0f, 0.0f, 1.0f, 0.0f); //Up and Forward are flipped because of
 vec4 fV = vec4(0.0f, 1.0f, 0.0f, 0.0f);
 vec4 rightV = vec4(1.0f, 0.0f, 0.0f, 0.0f);
 vec3 origin = vec3(0.0f, 0.0f, 0.0f);
-vec3 spherePosition = vec3(-9.0f, 10.0f, 0.0f);
+vec3 spherePosition;// = vec3(-9.0f, 10.0f, 0.0f);
+vec3 p1 = vec3(-12.0f, 8.0f, 0.0f);
+vec3 p2 = vec3(-13.0f, 11.0f, 1.0f);
+vec3 p3 = vec3(-11.0f, 14.0f, 2.0f);
+vec3 p4 = vec3(-10.0f, 12.0f, 3.0f);
 versor orientation;
 mat4 rotationMat;
 //mat4 eulerRotationMat;
@@ -150,6 +157,31 @@ void processInput()
 		exit(0);
 }
 
+vec3 splinePosition(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
+{
+	vec3 term1 = p1 * pow(1 - t, 3);
+	vec3 term2 = p2 * 3 * t * pow(1 - t, 2);
+	vec3 term3 = p3 * 3 * t * t * (1 - t);
+	vec3 term4 = p4 * pow(t, 3);
+	return term1 + term2 + term3 + term4;
+}
+
+void updatePosition()
+{
+	if (currentTime <= 1.0f)
+		currentTime += timeChange;
+	else
+	{
+		currentTime = 0.0f;
+		forwardAnimation = !forwardAnimation;
+	}
+
+	if(forwardAnimation)
+		spherePosition = splinePosition(p1, p2, p3, p4, currentTime);
+	else
+		spherePosition = splinePosition(p4, p3, p2, p1, currentTime);
+}
+
 void updateScene()
 {
 	switch (animationMode)
@@ -170,6 +202,7 @@ void updateScene()
 		torsoSkeleton.moveTo(spherePosition);
 		break;
 	case CCD_IK:
+		updatePosition();
 		torsoSkeleton.moveToCCD(spherePosition);
 		break;
 	}
@@ -180,6 +213,7 @@ void updateScene()
 
 void init()
 {
+	spherePosition = p1;
 	// Compile the shaders
 	for (int i = 0; i < NUM_SHADERS; i++)
 	{

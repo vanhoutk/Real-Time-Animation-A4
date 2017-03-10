@@ -30,6 +30,8 @@ public:
 	void rotateJoint(GLfloat rotation, vec3 axis);
 	void pivotJoint(GLfloat rotation);
 
+	versor orientation;
+
 private:
 	bool hasShell;
 	bool isRoot;
@@ -42,7 +44,7 @@ private:
 	Bone* parent;
 	vector<Bone*> children;
 	
-	versor orientation;
+	
 	vec4 upVector, rightVector, forwardVector;
 	mat4 rotationMatrix;
 

@@ -303,6 +303,145 @@ void Skeleton::moveToCCD(vec3 position)
 	CCDIK(position, handIndex, handIndex - 2);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Function:	QuatToEuler
+// Purpose:		Convert a Quaternion back to Euler Angles
+// Arguments:	Quaternions and target Euler vector
+// Notes:		The method is to convert Quaternion to a 3x3 matrix and
+//				decompose the matrix.  This is subject to the
+//				ambiguities of square roots and problems with inverse trig.
+//				Matrix to Euler conversion is really very ill-defined but works
+//				for my purposes.
+///////////////////////////////////////////////////////////////////////////////
+/*void QuatToEuler(const versor *quat, vec3 *euler)
+{
+	/// Local Variables ///////////////////////////////////////////////////////////
+	float matrix[3][3];
+	float cx, sx, x;
+	float cy, sy, y, yr;
+	float cz, sz, z;
+	///////////////////////////////////////////////////////////////////////////////
+	// CONVERT QUATERNION TO MATRIX - I DON'T REALLY NEED ALL OF IT
+	matrix[0][0] = 1.0f - (2.0f * quat->q[1] * quat->q[1]) - (2.0f * quat->q[2] * quat->q[2]); 
+	//	matrix[0][1] = (2.0f * quat->x * quat->y) - (2.0f * quat->w * quat->z);
+	//	matrix[0][2] = (2.0f * quat->x * quat->z) + (2.0f * quat->w * quat->y);
+	matrix[1][0] = (2.0f * quat->q[0] * quat->q[1]) + (2.0f * quat->q[3] * quat->q[2]);
+	//	matrix[1][1] = 1.0f - (2.0f * quat->x * quat->x) - (2.0f * quat->z * quat->z);
+	//	matrix[1][2] = (2.0f * quat->y * quat->z) - (2.0f * quat->w * quat->x);
+	matrix[2][0] = (2.0f * quat->q[0] * quat->q[2]) - (2.0f * quat->q[3] * quat->q[1]);
+	matrix[2][1] = (2.0f * quat->q[1] * quat->q[2]) + (2.0f * quat->q[3] * quat->q[0]);
+	matrix[2][2] = 1.0f - (2.0f * quat->q[0] * quat->q[0]) - (2.0f * quat->q[1] * quat->q[1]);
+
+	sy = -matrix[2][0];
+	cy = sqrt(1 - (sy * sy));
+	yr = (float)atan2(sy, cy);
+	euler->v[1] = (yr * 180.0f) / (float)M_PI;
+
+	// AVOID DIVIDE BY ZERO ERROR ONLY WHERE Y= +-90 or +-270 
+	// NOT CHECKING cy BECAUSE OF PRECISION ERRORS
+	if (sy != 1.0f && sy != -1.0f)
+	{
+		cx = matrix[2][2] / cy;
+		sx = matrix[2][1] / cy;
+		euler->v[0] = ((float)atan2(sx, cx) * 180.0f) / (float)M_PI;	// RAD TO DEG
+
+		cz = matrix[0][0] / cy;
+		sz = matrix[1][0] / cy;
+		euler->v[2] = ((float)atan2(sz, cz) * 180.0f) / (float)M_PI;	// RAD TO DEG
+	}
+	else
+	{
+		// SINCE Cos(Y) IS 0, I AM SCREWED.  ADOPT THE STANDARD Z = 0
+		// I THINK THERE IS A WAY TO FIX THIS BUT I AM NOT SURE.  EULERS SUCK
+		// NEED SOME MORE OF THE MATRIX TERMS NOW
+		matrix[1][1] = 1.0f - (2.0f * quat->q[0] * quat->q[0]) - (2.0f * quat->q[2] * quat->q[2]);
+		matrix[1][2] = (2.0f * quat->q[1] * quat->q[2]) - (2.0f * quat->q[3] * quat->q[0]);
+		cx = matrix[1][1];
+		sx = -matrix[1][2];
+		euler->v[0] = ((float)atan2(sx, cx) * 180.0f) / (float)M_PI;	// RAD TO DEG
+
+		cz = 1.0f;
+		sz = 0.0f;
+		euler->v[2] = ((float)atan2(sz, cz) * 180.0f) / (float)M_PI;	// RAD TO DEG
+	}
+}*/
+// QuatToEuler  ///////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// Function:	EulerToQuaternion2
+// Purpose:		Convert a set of Euler angles to a Quaternion
+// Arguments:	A rotation set of 3 angles, a quaternion to set
+// Discussion:  This is a second variation.  It creates a
+//				Series of quaternions and multiplies them together
+//				It would be easier to extend this for other rotation orders
+///////////////////////////////////////////////////////////////////////////////
+/*void EulerToQuaternion2(vec3 *rot, versor *quat)
+{
+	/// Local Variables ///////////////////////////////////////////////////////////
+	float rx, ry, rz, ti, tj, tk;
+	versor qx, qy, qz, qf;
+	///////////////////////////////////////////////////////////////////////////////
+	// FIRST STEP, CONVERT ANGLES TO RADIANS
+	rx = (rot->v[0] * (float)M_PI) / (360 / 2);
+	ry = (rot->v[1] * (float)M_PI) / (360 / 2);
+	rz = (rot->v[2] * (float)M_PI) / (360 / 2);
+	// GET THE HALF ANGLES
+	ti = rx * (float)0.5;
+	tj = ry * (float)0.5;
+	tk = rz * (float)0.5;
+
+	qx.q[0] = (float)sin(ti); qx.q[1] = 0.0; qx.q[2] = 0.0; qx.q[3] = (float)cos(ti);
+	qy.q[0] = 0.0; qy.q[1] = (float)sin(tj); qy.q[2] = 0.0; qy.q[3] = (float)cos(tj);
+	qz.q[0] = 0.0; qz.q[1] = 0.0; qz.q[2] = (float)sin(tk); qz.q[3] = (float)cos(tk);
+
+	qf = (qx * qy) * qz;
+	//MultQuaternions(&qx, &qy, &qf);
+	//MultQuaternions(&qf, &qz, &qf);
+	// ANOTHER TEST VARIATION
+	//	MultQuaternions2(&qx,&qy,&qf);
+	//	MultQuaternions2(&qf,&qz,&qf);
+
+	// INSURE THE QUATERNION IS NORMALIZED
+	// PROBABLY NOT NECESSARY IN MOST CASES
+
+	normalise(qf);
+
+	quat->q[0] = qf.q[0];
+	quat->q[1] = qf.q[1];
+	quat->q[2] = qf.q[2];
+	quat->q[3] = qf.q[3];
+}*/
+// EulerToQuaternion2  /////////////////////////////////////////////////////////
+
+
+
+/*void CheckDOFRestrictions(Bone *bone)
+{
+	/// Local Variables ///////////////////////////////////////////////////////////
+	vec3	euler;		// PLACE TO STORE EULER ANGLES
+	///////////////////////////////////////////////////////////////////////////////
+
+	// FIRST STEP IS TO CONVERT LINK QUATERNION BACK TO EULER ANGLES
+	QuatToEuler(&bone->orientation, &euler);
+
+	// CHECK THE DOF SETTINGS
+	if (euler.v[0] > bone->max_rx)
+		euler.v[0] = bone->max_rx;
+	if (euler.v[0] < bone->min_rx)
+		euler.v[0] = bone->min_rx;
+	if (euler.v[1] > bone->max_ry)
+		euler.v[1] = bone->max_ry;
+	if (euler.v[1] < bone->min_ry)
+		euler.v[1] = bone->min_ry;
+	if (euler.v[2] > bone->max_rz)
+		euler.v[2] = bone->max_rz;
+	if (euler.v[2] < bone->min_rz)
+		euler.v[2] = bone->min_rz;
+
+	// BACK TO QUATERNION
+	EulerToQuaternion2(&euler, &link->quat);
+}*/
+
 #define MAX_IK_TRIES 100 // TIMES THROUGH THE CCD LOOP
 #define IK_POS_THRESH 0.1f // THRESHOLD FOR SUCCESS
 
@@ -375,6 +514,7 @@ bool Skeleton::CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex)
 
 													//AxisAngleToQuat(&crossResult, turnDeg, &aquat);
 													//MultQuaternions(&bones[bone_index].quat, &aquat, &bones[bone_index].quat);
+
 
 				bones[bone_index]->rotateJoint(turnAngle, crossResult);
 
