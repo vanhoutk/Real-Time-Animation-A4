@@ -28,17 +28,16 @@ using namespace std;
 */
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))  // Macro for indexing vertex buffer
 
-#define NUM_MESHES   10
+#define NUM_MESHES   12
 #define NUM_SHADERS	 5
 #define NUM_TEXTURES 1
 
 bool firstMouse = true;
 bool forwardAnimation = true;
 bool keys[1024];
-Camera camera(vec3(-1.5f, 2.0f, 10.0f));
-//enum Meshes { BASE_MESH, THUMB0_MESH, THUMB1_MESH, THUMB2_MESH };
-enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH, LOWER_ARM_SHELL_MESH, UPPER_ARM_SHELL_MESH, TORSO_MESH, SPHERE_MESH };
-enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK, CCD_IK};
+Camera camera(vec3(-1.5f, 2.0f, 30.0f));
+enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH, LOWER_ARM_SHELL_MESH, UPPER_ARM_SHELL_MESH, TORSO_MESH, SHOULDERS_MESH, SHOULDERS_SHELL_MESH, SPHERE_MESH };
+enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK_2D, CCD_IK_MANUAL, CCD_IK_SPLINE};
 enum Shaders { SKYBOX, BASIC_COLOUR_SHADER, BASIC_TEXTURE_SHADER, LIGHT_SHADER, LIGHT_TEXTURE_SHADER };
 enum Textures { METAL_TEXTURE };
 GLfloat cameraSpeed = 0.005f;
@@ -46,30 +45,23 @@ GLfloat currentTime = 0.0f;
 GLfloat timeChange = 0.001f;
 GLfloat yaw = 0.0f, pitch = 0.0f, roll = 0.0f;
 GLuint animationMode = -1;
-GLuint boneIndex = 0;
 GLuint lastX = 400, lastY = 300;
 GLuint shaderProgramID[NUM_SHADERS];
 int screenWidth = 1000;
 int screenHeight = 800;
-Mesh skyboxMesh;// , planeMesh;
-//Mesh baseMesh, thumbMesh0, thumbMesh1, thumbMesh2;
-Mesh handMesh, handShellMesh, fingerJointMesh, fingerTipMesh, jointShellMesh, tipShellMesh, lowerArmShellMesh, upperArmShellMesh, torsoMesh, sphereMesh;
+Mesh handMesh, handShellMesh, fingerJointMesh, fingerTipMesh, jointShellMesh, tipShellMesh, lowerArmShellMesh, upperArmShellMesh, torsoMesh, shouldersMesh, shouldersShellMesh, sphereMesh;
 Skeleton handSkeleton, torsoSkeleton;
-vec4 upV = vec4(0.0f, 0.0f, 1.0f, 0.0f); //Up and Forward are flipped because of the initial rotation of the model
-vec4 fV = vec4(0.0f, 1.0f, 0.0f, 0.0f);
-vec4 rightV = vec4(1.0f, 0.0f, 0.0f, 0.0f);
-vec3 origin = vec3(0.0f, 0.0f, 0.0f);
+
 vec3 spherePosition;// = vec3(-9.0f, 10.0f, 0.0f);
-vec3 p1 = vec3(-12.0f, 8.0f, 0.0f);
-vec3 p2 = vec3(-13.0f, 11.0f, 1.0f);
-vec3 p3 = vec3(-11.0f, 14.0f, 2.0f);
-vec3 p4 = vec3(-10.0f, 12.0f, 3.0f);
-versor orientation;
-mat4 rotationMat;
-//mat4 eulerRotationMat;
+// | Spline points
+vec3 p1 = vec3(-10.0f, 8.0f, 0.0f);
+vec3 p2 = vec3(-11.0f, 11.0f, 1.0f);
+vec3 p3 = vec3(-9.0f, 14.0f, 2.0f);
+vec3 p4 = vec3(-2.0f, 10.0f, 3.0f);
+
 
 // | Resource Locations
-const char * meshFiles[NUM_MESHES] = { "../Meshes/hand.obj", "../Meshes/hand_shell.obj", "../Meshes/finger_joint.dae", "../Meshes/finger_tip.dae", "../Meshes/finger_joint_shell.obj", "../Meshes/finger_tip_shell.dae", "../Meshes/lower_arm_shell.dae", "../Meshes/upper_arm_shell.dae", "../Meshes/torso_disk3.dae", "../Meshes/particle.dae" };
+const char * meshFiles[NUM_MESHES] = { "../Meshes/right_hand.obj", "../Meshes/right_hand_shell.obj", "../Meshes/finger_joint.dae", "../Meshes/finger_tip.dae", "../Meshes/finger_joint_shell.obj", "../Meshes/finger_tip_shell.dae", "../Meshes/lower_arm_shell.dae", "../Meshes/right_upper_arm_shell.dae", "../Meshes/torso_disk3.dae", "../Meshes/shoulders.obj", "../Meshes/shoulder_shell.dae", "../Meshes/particle.dae" };
 const char * skyboxTextureFiles[6] = { "../Textures/TCWposx.png", "../Textures/TCWnegx.png", "../Textures/TCWposy.png", "../Textures/TCWnegy.png", "../Textures/TCWposz.png", "../Textures/TCWnegz.png" };
 const char * textureFiles[NUM_TEXTURES] = { "../Textures/metal.jpg" };
 
@@ -93,11 +85,9 @@ void display()
 	// Model Matrix
 	mat4 model = identity_mat4();
 
-	// Draw skybox first
-	//skyboxMesh.drawSkybox(view, projection);
-
 	vec4 view_position = vec4(camera.Position.v[0], camera.Position.v[1], camera.Position.v[2], 0.0f);
 
+	//handMesh.drawMesh(view, projection, model);
 	torsoSkeleton.drawSkeleton(view, projection, view_position);
 
 	mat4 sphere_model = scale(identity_mat4(), vec3(0.4f, 0.4f, 0.4f));
@@ -118,19 +108,24 @@ void processInput()
 	if (keys[GLUT_KEY_RIGHT])
 		camera.ProcessKeyboard(RIGHT, cameraSpeed);
 
-	if (keys['p'])
-		spherePosition += vec3(0.01f, 0.0f, 0.0f);
-	if (keys['o'])
-		spherePosition += vec3(0.0f, 0.01f, 0.0f);
-	if (keys['l'])
-		spherePosition += vec3(0.0f, -0.01f, 0.0f);
-	if (keys['i'])
-		spherePosition += vec3(-0.01f, 0.0f, 0.0f);
-	if (keys['j'])
-		spherePosition += vec3(0.0f, 0.0f, 0.01f);
-	if (keys['k'])
-		spherePosition += vec3(0.0f, 0.0f, -0.01f);
+	// Move the sphere position around manually
+	if (animationMode == CCD_IK_MANUAL)
+	{
+		if (keys['p'])
+			spherePosition += vec3(0.01f, 0.0f, 0.0f);
+		if (keys['o'])
+			spherePosition += vec3(0.0f, 0.01f, 0.0f);
+		if (keys['l'])
+			spherePosition += vec3(0.0f, -0.01f, 0.0f);
+		if (keys['i'])
+			spherePosition += vec3(-0.01f, 0.0f, 0.0f);
+		if (keys['j'])
+			spherePosition += vec3(0.0f, 0.0f, 0.01f);
+		if (keys['k'])
+			spherePosition += vec3(0.0f, 0.0f, -0.01f);
+	}
 
+	// Change animation mode
 	if (keys['1'])
 		animationMode = ROTATE_HAND;
 	if (keys['2'])
@@ -140,31 +135,19 @@ void processInput()
 	if (keys['4'])
 		animationMode = CLOSE_AND_OPEN_FIST;
 	if (keys['5'])
-		animationMode = ANALYTICAL_IK;
+		animationMode = ANALYTICAL_IK_2D;
 	if (keys['6'])
-		animationMode = CCD_IK;
-	/*if (keys['7'])
-		boneIndex = 7;
-	if (keys['8'])
-		boneIndex = 8;
-	if (keys['9'])
-		boneIndex = 9;*/
+		animationMode = CCD_IK_MANUAL;
+	if (keys['7'])
+		animationMode = CCD_IK_SPLINE;
 	if (keys['0'])
 		animationMode = -1;
 
-
+	// Close the window if 'Esc' is pressed
 	if (keys[(char)27])
 		exit(0);
 }
 
-vec3 splinePosition(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
-{
-	vec3 term1 = p1 * pow(1 - t, 3);
-	vec3 term2 = p2 * 3 * t * pow(1 - t, 2);
-	vec3 term3 = p3 * 3 * t * t * (1 - t);
-	vec3 term4 = p4 * pow(t, 3);
-	return term1 + term2 + term3 + term4;
-}
 
 void updatePosition()
 {
@@ -177,9 +160,9 @@ void updatePosition()
 	}
 
 	if(forwardAnimation)
-		spherePosition = splinePosition(p1, p2, p3, p4, currentTime);
+		spherePosition = splinePositionBezier(p1, p2, p3, p4, currentTime);
 	else
-		spherePosition = splinePosition(p4, p3, p2, p1, currentTime);
+		spherePosition = splinePositionBezier(p4, p3, p2, p1, currentTime);
 }
 
 void updateScene()
@@ -198,10 +181,13 @@ void updateScene()
 	case CLOSE_AND_OPEN_FIST:
 		torsoSkeleton.closeAndOpenFist();
 		break;
-	case ANALYTICAL_IK:
+	case ANALYTICAL_IK_2D:
 		torsoSkeleton.moveTo(spherePosition);
 		break;
-	case CCD_IK:
+	case CCD_IK_MANUAL:
+		torsoSkeleton.moveToCCD(spherePosition);
+		break;
+	case CCD_IK_SPLINE:
 		updatePosition();
 		torsoSkeleton.moveToCCD(spherePosition);
 		break;
@@ -211,18 +197,8 @@ void updateScene()
 	glutPostRedisplay();
 }
 
-void init()
+void initialiseMeshes()
 {
-	spherePosition = p1;
-	// Compile the shaders
-	for (int i = 0; i < NUM_SHADERS; i++)
-	{
-	shaderProgramID[i] = CompileShaders(vertexShaderNames[i], fragmentShaderNames[i]);
-	}
-
-	skyboxMesh = Mesh(&shaderProgramID[SKYBOX]);
-	skyboxMesh.setupSkybox(skyboxTextureFiles);
-
 	handMesh = Mesh(&shaderProgramID[LIGHT_TEXTURE_SHADER]);
 	handMesh.generateObjectBufferMesh(meshFiles[HAND_MESH]);
 	handMesh.loadTexture(textureFiles[METAL_TEXTURE]);
@@ -239,6 +215,10 @@ void init()
 	torsoMesh.generateObjectBufferMesh(meshFiles[TORSO_MESH]);
 	torsoMesh.loadTexture(textureFiles[METAL_TEXTURE]);
 
+	shouldersMesh = Mesh(&shaderProgramID[LIGHT_TEXTURE_SHADER]);
+	shouldersMesh.generateObjectBufferMesh(meshFiles[SHOULDERS_MESH]);
+	shouldersMesh.loadTexture(textureFiles[METAL_TEXTURE]);
+
 	handShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
 	handShellMesh.generateObjectBufferMesh(meshFiles[HAND_SHELL_MESH]);
 
@@ -254,13 +234,28 @@ void init()
 	upperArmShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
 	upperArmShellMesh.generateObjectBufferMesh(meshFiles[UPPER_ARM_SHELL_MESH]);
 
-
-	//handSkeleton.createHand(handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
-
-	torsoSkeleton.createTorso(torsoMesh, upperArmShellMesh, lowerArmShellMesh, handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
+	shouldersShellMesh = Mesh(&shaderProgramID[LIGHT_SHADER]);
+	shouldersShellMesh.generateObjectBufferMesh(meshFiles[SHOULDERS_SHELL_MESH]);
 
 	sphereMesh = Mesh(&shaderProgramID[BASIC_COLOUR_SHADER]);
 	sphereMesh.generateObjectBufferMesh(meshFiles[SPHERE_MESH]);
+}
+
+void init()
+{
+	spherePosition = p1;
+
+	// Compile the shaders
+	for (int i = 0; i < NUM_SHADERS; i++)
+	{
+	shaderProgramID[i] = CompileShaders(vertexShaderNames[i], fragmentShaderNames[i]);
+	}
+
+	// Create all of the meshes
+	initialiseMeshes();
+
+	//handSkeleton.createRightHand(handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
+	torsoSkeleton.createTorso(torsoMesh, shouldersMesh, shouldersShellMesh, upperArmShellMesh, lowerArmShellMesh, handMesh, handShellMesh, fingerJointMesh, jointShellMesh, fingerTipMesh, tipShellMesh);
 }
 
 /*

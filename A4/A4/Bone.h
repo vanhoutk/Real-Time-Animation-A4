@@ -21,6 +21,7 @@ public:
 	Bone(string name, bool isRoot, mat4 initial_offset, Mesh joint, Mesh shell, bool hasShell, vec4 jointColour, vec4 shellColour);
 
 	mat4 getGlobalTransformation();
+	vec4 getPosition();
 
 	void addChild(Bone* child);
 	void addChild(string name, mat4 initial_offset, Mesh joint, Mesh shell, bool hasShell);
@@ -103,6 +104,12 @@ mat4 Bone::getGlobalTransformation()
 	else
 		return this->parent->getGlobalTransformation() * this->local_transformation * this->rotationMatrix;
 }
+
+vec4 Bone::getPosition()
+{
+	return getGlobalTransformation() * vec4(0.0, 0.0, 0.0, 1.0);
+}
+
 
 void Bone::addChild(Bone* child)
 {

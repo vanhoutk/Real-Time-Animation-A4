@@ -59,102 +59,104 @@ void analyticalIK(vec3 endPosition, float L1, float L2, float& theta1, float& th
 	float fractionB = (pow((L1 + L2), 2) - distance2) / (distance2 - pow((L1 - L2), 2));
 
 	theta1 = thetaT - degrees(acosf(fraction1));
-	//theta2 = degrees(acosf(fraction2));
-
 	theta2 = degrees(2 * atanf(sqrt(fractionB)));
-
-
 }
 
-/*#define MAX_IK_TRIES 100 // TIMES THROUGH THE CCD LOOP
-#define IK_POS_THRESH 0.1f // THRESHOLD FOR SUCCESS
+#define MAX_IK_TRIES 100 
+#define IK_POS_THRESH 0.2f
 
-///////////////////////////////////////////////////////////////////////////////
-// Procedure:	ComputeCCDLink
-// Purpose:		Compute an IK Solution to an end effector position in 3D
-// Arguments:	End Target (x,y,z)
-// Returns:		TRUE if a solution exists, FALSE if the position isn't in reach
-///////////////////////////////////////////////////////////////////////////////	
-bool CCDIK(vec3 position, Bone* bones, int endEffectorIndex, int chainRootIndex)
+bool CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex, Bone** bones)
 {
-	/// Local Variables ///////////////////////////////////////////////////////////
-	vec3		rootPos, curEnd, desiredEnd, targetVector, curVector, crossResult;
-	GLfloat		cosAngle, turnAngle, turnDeg;
+	vec3		rootPos, curEnd, desiredEnd, targetVector, curVector, rotationAxis;
+	GLfloat		cosAngle, turnAngle;
 	int			bone_index, tries;
-	versor		aquat;
-	///////////////////////////////////////////////////////////////////////////////
-	// START AT THE LAST bone_index IN THE CHAIN
+
 	bone_index = endEffectorIndex - 1;
-	tries = 0;						// LOOP COUNTER SO I KNOW WHEN TO QUIT
+	tries = 0;
+
 	do
 	{
-		// THE COORDS OF THE X,Y,Z POSITION OF THE ROOT OF THIS BONE IS IN THE MATRIX
-		// TRANSLATION PART WHICH IS IN THE 12,13,14 POSITION OF THE MATRIX
-		rootPos.v[0] = bones[bone_index].getGlobalTransformation.m[12];
-		rootPos.v[1] = bones[bone_index].getGlobalTransformation.m[13];
-		rootPos.v[2] = bones[bone_index].getGlobalTransformation.m[14];
+		rootPos = bones[bone_index]->getPosition();
+		curEnd = bones[endEffectorIndex]->getPosition(); // Position of the end effector
+		desiredEnd = position; // Desired end effector position
 
-		// POSITION OF THE END EFFECTOR
-		curEnd.v[0] = bones[endEffectorIndex].getGlobalTransformation.m[12];
-		curEnd.v[1] = bones[endEffectorIndex].getGlobalTransformation.m[13];
-		curEnd.v[2] = bones[endEffectorIndex].getGlobalTransformation.m[14];
-
-		// DESIRED END EFFECTOR POSITION
-		desiredEnd.v[0] = position.v[0];
-		desiredEnd.v[1] = position.v[1];
-		desiredEnd.v[2] = position.v[2];
-
-		// SEE IF I AM ALREADY CLOSE ENOUGH
 		if (get_squared_dist(curEnd, desiredEnd) > IK_POS_THRESH)
 		{
-			// CREATE THE VECTOR TO THE CURRENT EFFECTOR POS
-			curVector.v[0] = curEnd.v[0] - rootPos.v[0];
-			curVector.v[1] = curEnd.v[1] - rootPos.v[1];
-			curVector.v[2] = curEnd.v[2] - rootPos.v[2];
+			curVector = curEnd - rootPos;
+			targetVector = position - rootPos;
 
-			// CREATE THE DESIRED EFFECTOR POSITION VECTOR
-			targetVector.v[0] = position.v[0] - rootPos.v[0];
-			targetVector.v[1] = position.v[1] - rootPos.v[1];
-			targetVector.v[2] = position.v[2] - rootPos.v[2];
-
-			// NORMALIZE THE VECTORS (EXPENSIVE, REQUIRES A SQRT)
 			curVector = normalise(curVector);
 			targetVector = normalise(targetVector);
 
-			// THE DOT PRODUCT GIVES ME THE COSINE OF THE DESIRED ANGLE
 			cosAngle = dot(targetVector, curVector);
 
-			// IF THE DOT PRODUCT RETURNS 1.0, I DON'T NEED TO ROTATE AS IT IS 0 DEGREES
 			if (cosAngle < 0.99999)
 			{
-				// USE THE CROSS PRODUCT TO CHECK WHICH WAY TO ROTATE
-				crossResult = cross(curVector, targetVector);
-				crossResult = normalise(crossResult);
-				turnAngle = acos((float)cosAngle);	// GET THE ANGLE
-				//turnDeg = degrees(turnAngle);		// COVERT TO DEGREES
-													// DAMPING
-				//if (m_Damping && turnDeg > bones[bone_index].damp_width)
-				//	turnDeg = bones[bone_index].damp_width;
-				
-				//AxisAngleToQuat(&crossResult, turnDeg, &aquat);
-				//MultQuaternions(&bones[bone_index].quat, &aquat, &bones[bone_index].quat);
+				rotationAxis = cross(curVector, targetVector);
+				rotationAxis = normalise(rotationAxis);
+				turnAngle = acos((float)cosAngle);
 
-				bones[bone_index].rotateJoint(turnAngle, crossResult);
-				
-				// HANDLE THE DOF RESTRICTIONS IF I WANT THEM
-				//if (m_DOF_Restrict)
-				//	CheckDOFRestrictions(&bones[bone_index]);
-				
-				// RECALC ALL THE MATRICES WITHOUT DRAWING ANYTHING
-				//drawScene(FALSE);		// CHANGE THIS TO TRUE IF YOU WANT TO SEE THE ITERATION
+				bones[bone_index]->rotateJoint(turnAngle, rotationAxis);
 			}
-			if (--bone_index < 0) bone_index = endEffectorIndex - 1;	// START OF THE CHAIN, RESTART
+
+			if (--bone_index < chainRootIndex)
+				bone_index = endEffectorIndex - 1;	// Go back to the start of the chain
 		}
-		// QUIT IF I AM CLOSE ENOUGH OR BEEN RUNNING LONG ENOUGH
-	} while (tries++ < MAX_IK_TRIES &&
-		get_squared_dist(curEnd, desiredEnd) > IK_POS_THRESH);
+	} while (tries++ < MAX_IK_TRIES && get_squared_dist(curEnd, desiredEnd) > IK_POS_THRESH);
+
 	if (tries == MAX_IK_TRIES)
-		return FALSE;
+		return false;
 	else
-		return TRUE;
-}*/
+		return true;
+}
+
+vec3 splinePositionBezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
+{
+	vec3 term1 = p1 * pow(1 - t, 3);
+	vec3 term2 = p2 * 3 * t * pow(1 - t, 2);
+	vec3 term3 = p3 * 3 * t * t * (1 - t);
+	vec3 term4 = p4 * pow(t, 3);
+	return term1 + term2 + term3 + term4;
+}
+
+vec3 splinePositionCatmullRom(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
+{
+	vec3 term1 = p1;
+	vec3 term2 = (p3 - p1) * t * 0.5;
+	vec3 term3 = ((p1 * 2) - (p2 * 5) + (p3 * 4) - p4) * t * t * 0.5;
+	vec3 term4 = ((p1 * -1) + (p2 * 3) - (p3 * 3) + p4) * t * t * t * 0.5;
+	return term1 + term2 + term3 + term4;
+}
+
+float GetT(float t, vec3 p0, vec3 p1)
+{
+	float alpha = 0.5f;
+	float a = pow((p1.v[0] - p0.v[0]), 2.0f) + pow((p1.v[1] - p0.v[1]), 2.0f) + pow((p1.v[2] - p0.v[2]), 2.0f);
+	float b = pow(a, 0.5f);
+	float c = pow(b, alpha);
+
+	return (c + t);
+}
+
+vec3 splinePositionCentripetalCatmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t)
+{
+	float t0 = 0.0f;
+	float t1 = GetT(t0, p0, p1);
+	float t2 = GetT(t1, p1, p2);
+	float t3 = GetT(t2, p2, p3);
+
+	//for (float t = t1; t<t2; t += ((t2 - t1) / 2))
+	//{
+		vec3 A1 = p0 * ((t1 - t) / (t1 - t0)) + p1 * ((t - t0) / (t1 - t0));
+		vec3 A2 = p1 * ((t2 - t) / (t2 - t1)) + p2 * ((t - t1) / (t2 - t1));
+		vec3 A3 = p3 * ((t3 - t) / (t3 - t2)) + p3 * ((t - t2) / (t3 - t2));
+
+		vec3 B1 = A1 * ((t2 - t) / (t2 - t0)) + A2 * ((t - t0) / (t2 - t0));
+		vec3 B2 = A2 * ((t3 - t) / (t3 - t1)) + A3 * ((t - t1) / (t3 - t1));
+
+		vec3 C = B1 * ((t2 - t) / (t2 - t1)) + B2 * ((t - t1) / (t2 - t1));
+
+		return C;
+	//}
+}
+
