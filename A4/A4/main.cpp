@@ -37,7 +37,7 @@ bool forwardAnimation = true;
 bool keys[1024];
 Camera camera(vec3(-1.5f, 2.0f, 30.0f));
 enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH, LOWER_ARM_SHELL_MESH, UPPER_ARM_SHELL_MESH, TORSO_MESH, SHOULDERS_MESH, SHOULDERS_SHELL_MESH, SPHERE_MESH };
-enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK_2D, CCD_IK_MANUAL, CCD_IK_SPLINE};
+enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK_2D, CCD_IK_MANUAL, CCD_IK_SPLINE, CCD_IK_MANUAL_FINGER, CCD_IK_SPLINE_FINGER};
 enum Shaders { SKYBOX, BASIC_COLOUR_SHADER, BASIC_TEXTURE_SHADER, LIGHT_SHADER, LIGHT_TEXTURE_SHADER };
 enum Textures { METAL_TEXTURE };
 GLfloat cameraSpeed = 0.005f;
@@ -109,7 +109,7 @@ void processInput()
 		camera.ProcessKeyboard(RIGHT, cameraSpeed);
 
 	// Move the sphere position around manually
-	if (animationMode == CCD_IK_MANUAL)
+	if (animationMode == CCD_IK_MANUAL || animationMode == CCD_IK_MANUAL_FINGER)
 	{
 		if (keys['p'])
 			spherePosition += vec3(0.01f, 0.0f, 0.0f);
@@ -140,6 +140,10 @@ void processInput()
 		animationMode = CCD_IK_MANUAL;
 	if (keys['7'])
 		animationMode = CCD_IK_SPLINE;
+	if (keys['8'])
+		animationMode = CCD_IK_MANUAL_FINGER;
+	if (keys['9'])
+		animationMode = CCD_IK_SPLINE_FINGER;
 	if (keys['0'])
 		animationMode = -1;
 
@@ -185,11 +189,18 @@ void updateScene()
 		torsoSkeleton.moveTo(spherePosition);
 		break;
 	case CCD_IK_MANUAL:
-		torsoSkeleton.moveToCCD(spherePosition);
+		torsoSkeleton.moveToCCD(spherePosition, true);
 		break;
 	case CCD_IK_SPLINE:
 		updatePosition();
-		torsoSkeleton.moveToCCD(spherePosition);
+		torsoSkeleton.moveToCCD(spherePosition, true);
+		break;
+	case CCD_IK_MANUAL_FINGER:
+		torsoSkeleton.moveToCCD(spherePosition, false);
+		break;
+	case CCD_IK_SPLINE_FINGER:
+		updatePosition();
+		torsoSkeleton.moveToCCD(spherePosition, false);
 		break;
 	}
 	processInput();

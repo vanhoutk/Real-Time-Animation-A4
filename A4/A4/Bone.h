@@ -167,7 +167,9 @@ void Bone::pivotJoint(GLfloat rotation)
 
 void Bone::rotateJoint(GLfloat rotation, vec3 axis)
 {
-	versor quat = quat_from_axis_rad(rotation, axis.v[0], axis.v[1], axis.v[2]);
+	vec3 localAxis = this->getGlobalTransformation() * vec4(axis.v[0], axis.v[1], axis.v[2], 0.0f);
+	localAxis = normalise(localAxis);
+	versor quat = quat_from_axis_rad(rotation, localAxis.v[0], localAxis.v[1], localAxis.v[2]);
 	multiplyQuat(this->orientation, quat, this->orientation);
 	this->rotationMatrix = quat_to_mat4(this->orientation);
 	this->forwardVector = this->rotationMatrix * vec4(1.0f, 0.0f, 0.0f, 0.0f);

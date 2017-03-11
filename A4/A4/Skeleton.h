@@ -30,7 +30,7 @@ public:
 	void openFist();
 	void closeAndOpenFist();
 	void moveTo(vec3 position);
-	void moveToCCD(vec3 position);
+	void moveToCCD(vec3 position, bool hand);
 
 private:
 	bool close = true;
@@ -317,7 +317,14 @@ void Skeleton::moveTo(vec3 position)
 	bones[3]->pivotJoint(-1.0f * radians(theta2));
 }
 
-void Skeleton::moveToCCD(vec3 position)
+void Skeleton::moveToCCD(vec3 position, bool hand)
 {
-	CCDIK(position, handIndex, handIndex - 2, bones);
+	if (hand)
+		CCDIK(position, handIndex, handIndex - 2, bones);
+	else
+		CCDIK(position, handIndex + 3, handIndex - 2, bones);
+	//if (CCD)
+	//	cout << "True. \n";
+	//else
+	//	cout << "False. \n";
 }

@@ -62,8 +62,8 @@ void analyticalIK(vec3 endPosition, float L1, float L2, float& theta1, float& th
 	theta2 = degrees(2 * atanf(sqrt(fractionB)));
 }
 
-#define MAX_IK_TRIES 100 
-#define IK_POS_THRESH 0.2f
+#define MAX_IK_TRIES 500
+#define IK_POS_THRESH 0.1f
 
 bool CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex, Bone** bones)
 {
@@ -73,6 +73,23 @@ bool CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex, Bone** bones
 
 	bone_index = endEffectorIndex - 1;
 	tries = 0;
+
+	float distance = sqrt(get_squared_dist(position, bones[chainRootIndex]->getPosition()));
+	float maxReach = 0;
+
+	for (int i = bone_index; i >= chainRootIndex; i--)
+	{
+		maxReach += sqrt(get_squared_dist(bones[i + 1]->getPosition(), bones[i]->getPosition()));
+	}
+
+	if (distance > maxReach)
+	{
+		cout << "Distance > MaxReach" << endl;
+		vec3 endDirection = position - bones[chainRootIndex]->getPosition();
+		endDirection = endDirection / distance;
+		endDirection = endDirection * maxReach;
+		position = endDirection + bones[chainRootIndex]->getPosition();
+	}
 
 	do
 	{
@@ -90,21 +107,21 @@ bool CCDIK(vec3 position, int endEffectorIndex, int chainRootIndex, Bone** bones
 
 			cosAngle = dot(targetVector, curVector);
 
-			if (cosAngle < 0.99999)
-			{
+			//if (cosAngle < 0.99999)
+			//{
 				rotationAxis = cross(curVector, targetVector);
 				rotationAxis = normalise(rotationAxis);
 				turnAngle = acos((float)cosAngle);
-
-				bones[bone_index]->rotateJoint(turnAngle, rotationAxis);
-			}
+				if(turnAngle > 0.1f * ONE_DEG_IN_RAD)
+					bones[bone_index]->rotateJoint(turnAngle, rotationAxis);
+			//}
 
 			if (--bone_index < chainRootIndex)
 				bone_index = endEffectorIndex - 1;	// Go back to the start of the chain
 		}
 	} while (tries++ < MAX_IK_TRIES && get_squared_dist(curEnd, desiredEnd) > IK_POS_THRESH);
 
-	if (tries == MAX_IK_TRIES)
+	if (tries >= MAX_IK_TRIES)
 		return false;
 	else
 		return true;
