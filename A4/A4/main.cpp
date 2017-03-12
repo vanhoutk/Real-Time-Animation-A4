@@ -36,15 +36,17 @@ bool firstMouse = true;
 bool forwardAnimation = true;
 bool keys[1024];
 Camera camera(vec3(-1.5f, 2.0f, 30.0f));
+enum Bezier { WAVE, CURVE };
 enum Meshes { HAND_MESH, HAND_SHELL_MESH, JOINT_MESH, TIP_MESH, JOINT_SHELL_MESH, TIP_SHELL_MESH, LOWER_ARM_SHELL_MESH, UPPER_ARM_SHELL_MESH, TORSO_MESH, SHOULDERS_MESH, SHOULDERS_SHELL_MESH, SPHERE_MESH };
 enum Modes { ROTATE_HAND, CLOSE_FIST, OPEN_FIST, CLOSE_AND_OPEN_FIST, ANALYTICAL_IK_2D, CCD_IK_MANUAL, CCD_IK_SPLINE, CCD_IK_MANUAL_FINGER, CCD_IK_SPLINE_FINGER};
 enum Shaders { SKYBOX, BASIC_COLOUR_SHADER, BASIC_TEXTURE_SHADER, LIGHT_SHADER, LIGHT_TEXTURE_SHADER };
 enum Textures { METAL_TEXTURE };
 GLfloat cameraSpeed = 0.005f;
 GLfloat currentTime = 0.0f;
-GLfloat timeChange = 0.001f;
+GLfloat timeChange = 0.002f;
 GLfloat yaw = 0.0f, pitch = 0.0f, roll = 0.0f;
 GLuint animationMode = -1;
+GLuint bezierCurve = CURVE;
 GLuint lastX = 400, lastY = 300;
 GLuint shaderProgramID[NUM_SHADERS];
 int screenWidth = 1000;
@@ -59,6 +61,9 @@ vec3 p2 = vec3(-11.0f, 11.0f, 1.0f);
 vec3 p3 = vec3(-9.0f, 14.0f, 2.0f);
 vec3 p4 = vec3(-2.0f, 10.0f, 3.0f);
 
+vec3 wave[4] = { vec3(-9.0f, 8.0f, 4.0f), vec3(-7.0f, 11.0f, 4.0f), vec3(-5.0f, 13.0f, 4.0f), vec3(-4.0f, 10.0f, 4.0f) };
+vec3 curve1[4] = { vec3(-6.0f, 6.0f, 4.0f), vec3(-9.0f, 6.0f, 4.0f), vec3(-9.0f, 10.0f, 4.0f), vec3(-6.0f, 10.0f, 4.0f) };
+vec3 curve2[4] = { vec3(-6.0f, 10.0f, 4.0f), vec3(-3.0f, 10.0f, 4.0f), vec3(-3.0f, 6.0f, 4.0f), vec3(-6.0f, 6.0f, 4.0f) };
 
 // | Resource Locations
 const char * meshFiles[NUM_MESHES] = { "../Meshes/right_hand.obj", "../Meshes/right_hand_shell.obj", "../Meshes/finger_joint.dae", "../Meshes/finger_tip.dae", "../Meshes/finger_joint_shell.obj", "../Meshes/finger_tip_shell.dae", "../Meshes/lower_arm_shell.dae", "../Meshes/right_upper_arm_shell.dae", "../Meshes/torso_disk3.dae", "../Meshes/shoulders.obj", "../Meshes/shoulder_shell.dae", "../Meshes/particle.dae" };
@@ -134,8 +139,8 @@ void processInput()
 		animationMode = OPEN_FIST;
 	if (keys['4'])
 		animationMode = CLOSE_AND_OPEN_FIST;
-	if (keys['5'])
-		animationMode = ANALYTICAL_IK_2D;
+	//if (keys['5'])
+		//animationMode = ANALYTICAL_IK_2D;
 	if (keys['6'])
 		animationMode = CCD_IK_MANUAL;
 	if (keys['7'])
@@ -146,6 +151,11 @@ void processInput()
 		animationMode = CCD_IK_SPLINE_FINGER;
 	if (keys['0'])
 		animationMode = -1;
+
+	if (keys['n'])
+		bezierCurve = WAVE;
+	if (keys['m'])
+		bezierCurve = CURVE;
 
 	// Close the window if 'Esc' is pressed
 	if (keys[(char)27])
@@ -163,10 +173,27 @@ void updatePosition()
 		forwardAnimation = !forwardAnimation;
 	}
 
-	if(forwardAnimation)
-		spherePosition = splinePositionBezier(p1, p2, p3, p4, currentTime);
+	//if(forwardAnimation)
+	//	spherePosition = splinePositionBezier(p1, p2, p3, p4, currentTime);
+	//else
+	//	spherePosition = splinePositionBezier(p4, p3, p2, p1, currentTime);
+	if (bezierCurve == WAVE)
+	{
+		if (forwardAnimation)
+			spherePosition = splinePositionBezier(wave[0], wave[1], wave[2], wave[3], currentTime);
+		else
+			spherePosition = splinePositionBezier(wave[3], wave[2], wave[1], wave[0], currentTime);
+	}
 	else
-		spherePosition = splinePositionBezier(p4, p3, p2, p1, currentTime);
+	{
+		if (forwardAnimation)
+			spherePosition = splinePositionBezier(curve1[0], curve1[1], curve1[2], curve1[3], currentTime);
+		else
+			spherePosition = splinePositionBezier(curve2[0], curve2[1], curve2[2], curve2[3], currentTime);
+	}
+	
+
+
 }
 
 void updateScene()
