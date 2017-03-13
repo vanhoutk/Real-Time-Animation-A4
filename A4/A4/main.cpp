@@ -99,6 +99,47 @@ void display()
 	sphere_model = translate(sphere_model, spherePosition);
 	sphereMesh.drawMesh(view, projection, sphere_model, vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
+
+	mat4 point_model = scale(identity_mat4(), vec3(0.2f, 0.2f, 0.2f));
+
+	if (animationMode == CCD_IK_SPLINE || animationMode == CCD_IK_SPLINE_FINGER)
+	{
+		if (bezierCurve == WAVE)
+		{
+			mat4 point1_model = translate(point_model, wave[0]);
+			sphereMesh.drawMesh(view, projection, point1_model, vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+			mat4 control_point1_model = translate(point_model, wave[1]);
+			sphereMesh.drawMesh(view, projection, control_point1_model, vec4(0.0f, 0.0f, 1.0f, 1.0f));
+
+			mat4 control_point2_model = translate(point_model, wave[2]);
+			sphereMesh.drawMesh(view, projection, control_point2_model, vec4(0.0f, 0.0f, 1.0f, 1.0f));
+
+			mat4 point2_model = translate(point_model, wave[3]);
+			sphereMesh.drawMesh(view, projection, point2_model, vec4(1.0f, 0.0f, 0.0f, 1.0f));
+		}
+		else
+		{
+			mat4 point1_model = translate(point_model, curve1[0]);
+			sphereMesh.drawMesh(view, projection, point1_model, vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+			mat4 control_point1_model = translate(point_model, curve1[1]);
+			sphereMesh.drawMesh(view, projection, control_point1_model, vec4(0.0f, 0.0f, 1.0f, 1.0f));
+
+			mat4 control_point2_model = translate(point_model, curve1[2]);
+			sphereMesh.drawMesh(view, projection, control_point2_model, vec4(0.0f, 0.0f, 1.0f, 1.0f));
+			
+			mat4 point2_model = translate(point_model, curve1[3]);
+			sphereMesh.drawMesh(view, projection, point2_model, vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+			mat4 control_point3_model = translate(point_model, curve2[1]);
+			sphereMesh.drawMesh(view, projection, control_point3_model, vec4(0.0f, 0.0f, 1.0f, 1.0f));
+
+			mat4 control_point4_model = translate(point_model, curve2[2]);
+			sphereMesh.drawMesh(view, projection, control_point4_model, vec4(0.0f, 0.0f, 1.0f, 1.0f));
+		}
+	}
+
 	glutSwapBuffers();
 }
 
